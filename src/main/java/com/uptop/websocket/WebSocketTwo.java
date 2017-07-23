@@ -54,32 +54,33 @@ public class WebSocketTwo {
         if(jsonObject!=null){
             String room = (String)jsonObject.get("room");
             String openId = (String)jsonObject.get("openId");
-            //设置用户session相关属性
-            this.session = session;
-            this.httpSession = (HttpSession) config.getUserProperties()
-                    .get(HttpSession.class.getName());
-            this.httpSession.setAttribute("room",room);
-            this.httpSession.setAttribute("openId",openId);
-            this.httpSession.setAttribute("oilNum",0);
-            System.out.println("房间号为"+room+",openId为"+openId+"进入房间!");
+            if(!webSocketSet.contains(this)){
+                //设置用户session相关属性
+                this.session = session;
+                this.httpSession = (HttpSession) config.getUserProperties()
+                        .get(HttpSession.class.getName());
+                this.httpSession.setAttribute("room",room);
+                this.httpSession.setAttribute("openId",openId);
+                this.httpSession.setAttribute("oilNum",0);
+                System.out.println("房间号为"+room+",openId为"+openId+"进入房间!");
 
-            //设置总webSocket属性
-            webSocketSet.add(this);     //加入set中
-            addOnlineCount();           //在线数加1
-            System.out.println("有新连接加入！当前总在线人数为" + getOnlineCount());
+                //设置总webSocket属性
+                webSocketSet.add(this);     //加入set中
+                addOnlineCount();           //在线数加1
+                System.out.println("有新连接加入！当前总在线人数为" + getOnlineCount());
 
-            //init room
-            if(concurrentHashMap.get(room)==null){
-                concurrentHashMap.put(room,new CopyOnWriteArraySet<WebSocketTwo>());
+                //init room
+                if(concurrentHashMap.get(room)==null){
+                    concurrentHashMap.put(room,new CopyOnWriteArraySet<WebSocketTwo>());
+                }
+                //add user to room
+                concurrentHashMap.get(room).add(this);
+
+                //init oil num
+                if(oilHashMap.get(room)==null){
+                    oilHashMap.put(room,new AtomicInteger(0));
+                }
             }
-            //add user to room
-            concurrentHashMap.get(room).add(this);
-
-            //init oil num
-            if(oilHashMap.get(room)==null){
-                oilHashMap.put(room,new AtomicInteger(0));
-            }
-
             JSONArray jsonArray = new JSONArray();
             for (WebSocketTwo item : concurrentHashMap.get(this.httpSession.getAttribute("room"))) {
                 JSONObject jsonObject1 = new JSONObject();
@@ -87,11 +88,14 @@ public class WebSocketTwo {
                 jsonObject1.put("oilNum",item.httpSession.getAttribute("oilNum"));
                 jsonArray.add(jsonObject1);
             }
+            JSONObject returnObj = new JSONObject();
+            returnObj.put("type",0);
+            returnObj.put("jsonArray",jsonArray);
 
             for (WebSocketTwo item : concurrentHashMap.get(this.httpSession.getAttribute("room"))) {
                 try {
                     synchronized (item){
-                        item.session.getAsyncRemote().sendText(JSON.toJSONString(jsonArray));
+                        item.session.getAsyncRemote().sendText(JSON.toJSONString(returnObj));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -159,7 +163,8 @@ public class WebSocketTwo {
             this.httpSession.setAttribute("oilNum",Integer.parseInt(String.valueOf(this.httpSession.getAttribute("oilNum")))+1);
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("openId",this.httpSession.getAttribute("openId"));
-            jsonObject.put("num",this.httpSession.getAttribute("oilNum"));
+            jsonObject.put("oilNum",this.httpSession.getAttribute("oilNum"));
+            jsonObject.put("type",1);
 
             //群发消息
             for (WebSocketTwo item : concurrentHashMap.get(this.httpSession.getAttribute("room"))) {

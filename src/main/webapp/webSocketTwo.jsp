@@ -18,9 +18,11 @@
 
 <script type="text/javascript">
     var websocket = null;
+    var openId = randomString(10);
+    var room = 1;
     //判断当前浏览器是否支持WebSocket
     if ('WebSocket' in window) {
-        websocket = new WebSocket("ws://localhost:8080/websocketTwo/room=1&openId=a");
+        websocket = new WebSocket("ws://localhost:8080/websocketTwo/room="+room+"&openId="+openId);
     }
     else {
         alert('当前浏览器 Not support websocket')
@@ -52,42 +54,54 @@
         closeWebSocket();
     }
 
-    var users = [];
-    var name = 0;
+    var openIds = [];
     //将消息显示在网页上
     function setMessageInnerHTML(data) {
         var jsonDate = JSON.parse(data);
         if(jsonDate.type==0){
-            var names = jsonDate.names;
-            for(var i=0;i<names.length;i++){
-                var boolean = false;
-                if(name == 0){
-                    if(names[i].isNew){
-                        name = names[i].name;
-                        boolean = true;
-                    }
-                }
-                var na = names[i].name;
-                if(users.indexOf(na)<0){
-                    users.push(na);
+            var jsonArray = jsonDate.jsonArray;
+            for(var i=0;i<jsonArray.length;i++){
+                var thisOpenId = jsonArray[i].openId;
+                if(openIds.indexOf(thisOpenId)<0){
+                    openIds.push(thisOpenId);
                     var row;
                     var table=document.getElementById("tb");
                     row=table.insertRow(1);
+                    //设置文字
                     var row1 = row.insertCell(0);
-                    row1.appendChild(document.createTextNode(na));
-                    var row2 = row.insertCell(1);
-                    var element = document.createElement('p');
-                    element.id=na;
-                    if(boolean){
-                        element.style = "color:blue;";
-                        boolean = false;
+                    var element1 = document.createElement('p');
+                    if(thisOpenId == openId){
+                        element1.style = "color:red;";
                     }
-                    element.appendChild(document.createTextNode("0"));
-                    row2.appendChild(element);
+                    element1.appendChild(document.createTextNode(thisOpenId))
+                    row1.appendChild(element1);
+                    //设置数字
+                    var row2 = row.insertCell(1);
+                    var element2 = document.createElement('p');
+                    element2.id=thisOpenId;
+                    if(thisOpenId == openId){
+                        element2.style = "color:blue;";
+                    }
+                    element2.appendChild(document.createTextNode(jsonArray[i].oilNum));
+                    row2.appendChild(element2);
+                }
+            }
+            for(var i=0;i<openIds.length;i++){
+                var del = true;
+                for(var j=0;j<jsonArray.length;j++){
+                    if(openIds[i] == jsonArray[j].openId){
+                        del =false;
+                    }
+                }
+                if(del){
+                    var index = openIds.indexOf(openIds[i]);
+                    var table=document.getElementById("tb");
+                    table.deleteRow(index);
+                    openIds.remove(openIds[i]);
                 }
             }
         }else if(jsonDate.type==1){
-                document.getElementById(jsonDate.name).innerHTML=jsonDate.num;
+                document.getElementById(jsonDate.openId).innerHTML=jsonDate.oilNum;
         }
     }
 
@@ -100,5 +114,23 @@
     function send() {
         websocket.send(name);
     }
+
+    function randomString(len) {
+        len = len || 32;
+        var $chars = 'ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678';    /****默认去掉了容易混淆的字符oOLl,9gq,Vv,Uu,I1****/
+        var maxPos = $chars.length;
+        var pwd = '';
+        for (i = 0; i < len; i++) {
+            pwd += $chars.charAt(Math.floor(Math.random() * maxPos));
+        }
+        return pwd;
+    }
+
+    Array.prototype.remove = function(val) {
+        var index = this.indexOf(val);
+        if (index > -1) {
+            this.splice(index, 1);
+        }
+    };
 </script>
 </html>
