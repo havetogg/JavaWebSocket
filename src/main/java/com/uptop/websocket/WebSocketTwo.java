@@ -3,6 +3,7 @@ package com.uptop.websocket;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.uptop.tool.RequestTool;
 import org.springframework.util.StringUtils;
 
 import javax.servlet.http.HttpSession;
@@ -10,6 +11,7 @@ import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -83,12 +85,7 @@ public class WebSocketTwo {
                 JSONObject jsonObject1 = new JSONObject();
                 jsonObject1.put("openId",item.httpSession.getAttribute("openId"));
                 jsonObject1.put("oilNum",item.httpSession.getAttribute("oilNum"));
-                if(openId.equals(item.httpSession.getAttribute("openId"))){
-                    jsonObject.put("isNew",true);
-                }else{
-                    jsonObject.put("isNew",false);
-                }
-                jsonArray.add(jsonObject);
+                jsonArray.add(jsonObject1);
             }
 
             for (WebSocketTwo item : concurrentHashMap.get(this.httpSession.getAttribute("room"))) {
@@ -201,12 +198,16 @@ public class WebSocketTwo {
 
     //检查房间是否有效
     public JSONObject ParamToRoomAndOpenId(String stringParam){
-        JSONObject jsonObject = JSON.parseObject(stringParam);
-        String room = (String)jsonObject.get("room");
-        String openId = (String)jsonObject.get("openId");
+        Map<String, String> requestParamMap = RequestTool.RequestParam(stringParam);
+        String room = requestParamMap.get("room");
+        String openId = requestParamMap.get("openId");
+
         if(StringUtils.isEmpty(room)||StringUtils.isEmpty(openId)){
             return null;
         }else{
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("room",room);
+            jsonObject.put("openId",openId);
             return jsonObject;
         }
     }

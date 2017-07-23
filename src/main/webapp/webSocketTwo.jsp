@@ -20,7 +20,7 @@
     var websocket = null;
     //判断当前浏览器是否支持WebSocket
     if ('WebSocket' in window) {
-        websocket = new WebSocket("ws://localhost:8080/JavaWebSocket/websocketTwo?room=1&openId=a");
+        websocket = new WebSocket("ws://localhost:8080/websocketTwo/room=1&openId=a");
     }
     else {
         alert('当前浏览器 Not support websocket')
@@ -34,11 +34,11 @@
     //连接成功建立的回调方法
     websocket.onopen = function (event) {
         console.log("WebSocket连接成功");
-        console.log(event.data);
     }
 
     //接收到消息的回调方法
     websocket.onmessage = function (event) {
+        console.log(event.data);
         setMessageInnerHTML(event.data);
     }
 
