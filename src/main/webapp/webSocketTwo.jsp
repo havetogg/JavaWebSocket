@@ -19,7 +19,14 @@
 
 <script type="text/javascript">
     var websocket = null;
-    var openId = randomString(10);
+    var storage = window.localStorage;
+    var openId = "";
+    if(storage.getItem("openId")==null){
+        openId = randomString(10);
+        storage.setItem("openId",openId);
+    }else{
+        openId = storage.getItem("openId");
+    }
     var room = 1;
     //判断当前浏览器是否支持WebSocket
     if ('WebSocket' in window) {

@@ -40,11 +40,16 @@ public class WebSocketTwo {
     //线程安全的map来存放房间和对应的人数
     public static ConcurrentHashMap<String,CopyOnWriteArraySet<WebSocketTwo>> concurrentHashMap = new ConcurrentHashMap();
 
-    //当前房间油数
+    //当前房间已抢到油数
     public static ConcurrentHashMap<String,AtomicInteger> oilHashMap = new ConcurrentHashMap();
 
     //设置当前房间的油数
     public static ConcurrentHashMap<String,Integer> oilControlMap = new ConcurrentHashMap<String, Integer>();
+
+
+    public static ConcurrentHashMap<String,ConcurrentHashMap<String,Integer>> userOilMap = new ConcurrentHashMap<String, ConcurrentHashMap<String, Integer>>();
+
+
 
 
     /**
@@ -54,40 +59,47 @@ public class WebSocketTwo {
      */
     @OnOpen
     public void onOpen(@PathParam(value="param") String param,Session session, EndpointConfig config) {
+        //设置总webSocket属性
+        webSocketSet.add(this);     //加入set中
+        addOnlineCount();           //在线数加1
+        System.out.println("有新连接加入！当前总在线人数为" + getOnlineCount());
         JSONObject jsonObject = ParamToRoomAndOpenId(param);
         if(jsonObject!=null){
             String room = (String)jsonObject.get("room");
             String openId = (String)jsonObject.get("openId");
-            if(!webSocketSet.contains(this)){
-                //设置用户session相关属性
-                this.session = session;
-                this.httpSession = (HttpSession) config.getUserProperties()
-                        .get(HttpSession.class.getName());
-                this.httpSession.setAttribute("room",room);
-                this.httpSession.setAttribute("openId",openId);
-                this.httpSession.setAttribute("oilNum",0);
-                System.out.println("房间号为"+room+",openId为"+openId+"进入房间!");
+            //设置用户session相关属性
+            this.session = session;
+            this.httpSession = (HttpSession) config.getUserProperties()
+                    .get(HttpSession.class.getName());
+            this.httpSession.setAttribute("room",room);
+            this.httpSession.setAttribute("openId",openId);
+            this.httpSession.setAttribute("oilNum",0);
+            System.out.println("房间号为"+room+",openId为"+openId+"进入房间!");
 
-                //设置总webSocket属性
-                webSocketSet.add(this);     //加入set中
-                addOnlineCount();           //在线数加1
-                System.out.println("有新连接加入！当前总在线人数为" + getOnlineCount());
+            //init room
+            if(concurrentHashMap.get(room)==null){
+                concurrentHashMap.put(room,new CopyOnWriteArraySet<WebSocketTwo>());
+            }
+            //add user to room
+            concurrentHashMap.get(room).add(this);
 
-                //init room
-                if(concurrentHashMap.get(room)==null){
-                    concurrentHashMap.put(room,new CopyOnWriteArraySet<WebSocketTwo>());
-                }
-                //add user to room
-                concurrentHashMap.get(room).add(this);
+            //init oil num
+            if(oilHashMap.get(room)==null){
+                oilHashMap.put(room,new AtomicInteger(0));
+            }
 
-                //init oil num
-                if(oilHashMap.get(room)==null){
-                    oilHashMap.put(room,new AtomicInteger(0));
-                }
+            if(oilControlMap.get(room)==null){
+                oilControlMap.put(room,500);
+            }
 
-                if(oilControlMap.get(room)==null){
-                    oilControlMap.put(room,500);
-                }
+            if(userOilMap.get(room)==null){
+                userOilMap.put(room,new ConcurrentHashMap<String, Integer>());
+            }
+            if(userOilMap.get(room).get(openId)==null){
+                userOilMap.get(room).put(openId,0);
+            }else{
+                int userOilNum = userOilMap.get(room).get(openId);
+                this.httpSession.setAttribute("oilNum",userOilNum);
             }
             JSONArray jsonArray = new JSONArray();
             for (WebSocketTwo item : concurrentHashMap.get(this.httpSession.getAttribute("room"))) {
@@ -172,6 +184,7 @@ public class WebSocketTwo {
         if(oilHashMap.get(this.httpSession.getAttribute("room")).get()<oilControlMap.get(this.httpSession.getAttribute("room"))){
             oilHashMap.get(this.httpSession.getAttribute("room")).getAndIncrement();
             this.httpSession.setAttribute("oilNum",Integer.parseInt(String.valueOf(this.httpSession.getAttribute("oilNum")))+1);
+            userOilMap.get(this.httpSession.getAttribute("room")).put(String.valueOf(this.httpSession.getAttribute("openId")),Integer.parseInt(String.valueOf(this.httpSession.getAttribute("oilNum"))));
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("openId",this.httpSession.getAttribute("openId"));
             jsonObject.put("oilNum",this.httpSession.getAttribute("oilNum"));
