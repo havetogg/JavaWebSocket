@@ -3,10 +3,11 @@
 <html>
 <head>
     <title>index Page</title>
+    <script type="text/javascript" src="js/common.js"></script>
 </head>
 <body>
-    Welcome<br/><input id="text" type="text" value="0"/>
-    <button onclick="send()">发送消息</button>
+    Welcome<p id="totalOilNum"></p><br/>
+    <button onclick="send()">抢</button>
     <hr/>
     <button onclick="closeWebSocket()">关闭WebSocket连接</button>
     <hr/>
@@ -22,7 +23,7 @@
     var room = 1;
     //判断当前浏览器是否支持WebSocket
     if ('WebSocket' in window) {
-        websocket = new WebSocket("ws://localhost:8080/websocketTwo/room="+room+"&openId="+openId);
+        websocket = new WebSocket("ws://"+getWebSocketRoot()+"/websocketTwo/room="+room+"&openId="+openId);
     }
     else {
         alert('当前浏览器 Not support websocket')
@@ -58,6 +59,7 @@
     //将消息显示在网页上
     function setMessageInnerHTML(data) {
         var jsonDate = JSON.parse(data);
+        document.getElementById("totalOilNum").innerHTML=jsonDate.totalOilNum;
         if(jsonDate.type==0){
             var jsonArray = jsonDate.jsonArray;
             for(var i=0;i<jsonArray.length;i++){
@@ -96,7 +98,7 @@
                 if(del){
                     var index = openIds.indexOf(openIds[i]);
                     var table=document.getElementById("tb");
-                    table.deleteRow(index);
+                    table.deleteRow(openIds.length-index);
                     openIds.remove(openIds[i]);
                 }
             }
@@ -132,5 +134,9 @@
             this.splice(index, 1);
         }
     };
+
+    function setOilNum(totalOilNum) {
+        websocket = new WebSocket("ws://"+getWebSocketRoot()+"/websocketTwo/room="+room+"&openId="+openId+"&totalOilNum="+totalOilNum);
+    }
 </script>
 </html>

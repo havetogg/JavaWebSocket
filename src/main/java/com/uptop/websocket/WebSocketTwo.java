@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.uptop.tool.RequestTool;
 import org.springframework.util.StringUtils;
 
+import javax.persistence.criteria.CriteriaBuilder;
 import javax.servlet.http.HttpSession;
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
@@ -41,6 +42,9 @@ public class WebSocketTwo {
 
     //当前房间油数
     public static ConcurrentHashMap<String,AtomicInteger> oilHashMap = new ConcurrentHashMap();
+
+    //设置当前房间的油数
+    public static ConcurrentHashMap<String,Integer> oilControlMap = new ConcurrentHashMap<String, Integer>();
 
 
     /**
@@ -80,6 +84,10 @@ public class WebSocketTwo {
                 if(oilHashMap.get(room)==null){
                     oilHashMap.put(room,new AtomicInteger(0));
                 }
+
+                if(oilControlMap.get(room)==null){
+                    oilControlMap.put(room,500);
+                }
             }
             JSONArray jsonArray = new JSONArray();
             for (WebSocketTwo item : concurrentHashMap.get(this.httpSession.getAttribute("room"))) {
@@ -90,12 +98,15 @@ public class WebSocketTwo {
             }
             JSONObject returnObj = new JSONObject();
             returnObj.put("type",0);
+            returnObj.put("totalOilNum",oilControlMap.get(room)-oilHashMap.get(room).get());
             returnObj.put("jsonArray",jsonArray);
+            String returnStr = JSON.toJSONString(returnObj);
 
             for (WebSocketTwo item : concurrentHashMap.get(this.httpSession.getAttribute("room"))) {
                 try {
                     synchronized (item){
-                        item.session.getAsyncRemote().sendText(JSON.toJSONString(returnObj));
+                        //item.session.getAsyncRemote().sendText(returnStr);
+                        item.session.getBasicRemote().sendText(returnStr);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -158,19 +169,22 @@ public class WebSocketTwo {
     public void sendMessage(String message) {
         System.out.println("来自客户端的消息:" + message);
         System.out.println("当前房间号:"+this.httpSession.getAttribute("room"));
-        if(oilHashMap.get(this.httpSession.getAttribute("room")).get()<500){
+        if(oilHashMap.get(this.httpSession.getAttribute("room")).get()<oilControlMap.get(this.httpSession.getAttribute("room"))){
             oilHashMap.get(this.httpSession.getAttribute("room")).getAndIncrement();
             this.httpSession.setAttribute("oilNum",Integer.parseInt(String.valueOf(this.httpSession.getAttribute("oilNum")))+1);
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("openId",this.httpSession.getAttribute("openId"));
             jsonObject.put("oilNum",this.httpSession.getAttribute("oilNum"));
+            jsonObject.put("totalOilNum",oilControlMap.get(this.httpSession.getAttribute("room"))-oilHashMap.get(this.httpSession.getAttribute("room")).get());
             jsonObject.put("type",1);
+            String returnStr = JSON.toJSONString(jsonObject);
 
             //群发消息
             for (WebSocketTwo item : concurrentHashMap.get(this.httpSession.getAttribute("room"))) {
                 try {
                     synchronized (item){
-                        item.session.getAsyncRemote().sendText(JSON.toJSONString(jsonObject));
+                        //item.session.getAsyncRemote().sendText(returnStr);
+                        item.session.getBasicRemote().sendText(returnStr);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -210,6 +224,11 @@ public class WebSocketTwo {
         if(StringUtils.isEmpty(room)||StringUtils.isEmpty(openId)){
             return null;
         }else{
+            if(!StringUtils.isEmpty(requestParamMap.get("totalOilNum"))){
+                int totalOilNum = Integer.parseInt(requestParamMap.get("totalOilNum"));
+                oilControlMap.put(room,totalOilNum);
+                oilHashMap.put(room,new AtomicInteger(0));
+            }
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("room",room);
             jsonObject.put("openId",openId);

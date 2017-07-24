@@ -61,7 +61,7 @@ public class RequestTool {
     }
     /**
      * 解析出url参数中的键值对
-     * 如 "index.jsp?Action=del&id=123"，解析出Action:del,id:123存入map中
+     * 如 "webSocketTest.jsp?Action=del&id=123"，解析出Action:del,id:123存入map中
      * @param URL  url地址
      * @return  url请求参数部分
      */
