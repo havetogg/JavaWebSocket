@@ -9,7 +9,6 @@ import java.util.concurrent.TimeUnit;
 public class Monitor implements Runnable {
 
 
-    @Override
     public void run() {
         WebSocketTest webSocketTest = new WebSocketTest();
         webSocketTest.sendMsg("当前时间:" + new Date());
