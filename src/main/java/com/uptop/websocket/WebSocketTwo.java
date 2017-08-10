@@ -119,6 +119,7 @@ public class WebSocketTwo {
                     synchronized (item){
                         //item.session.getAsyncRemote().sendText(returnStr);
                         item.session.getBasicRemote().sendText(returnStr);
+                        System.out.println("=================="+item.session.getMaxTextMessageBufferSize());
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -193,24 +194,32 @@ public class WebSocketTwo {
             String returnStr = JSON.toJSONString(jsonObject);
 
             //群发消息
-            for (WebSocketTwo item : concurrentHashMap.get(this.httpSession.getAttribute("room"))) {
-                try {
-                    synchronized (item){
-                        //item.session.getAsyncRemote().sendText(returnStr);
-                        item.session.getBasicRemote().sendText(returnStr);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    webSocketSet.remove(this);  //从set中删除
-                    subOnlineCount();           //在线数减1
-                    concurrentHashMap.get(this.httpSession.getAttribute("room")).remove(this);
-                    System.out.println("有一连接关闭！当前在线人数为" + getOnlineCount());
+            while(true) {
+                for (WebSocketTwo item : concurrentHashMap.get(this.httpSession.getAttribute("room"))) {
                     try {
-                        item.session.close();
-                    } catch (IOException e1) {
-                        // Ignore
+                        synchronized (item) {
+                            if(!item.session.isOpen()){
+                                System.out.println("哈哈不行啦");
+                            }
+                            //item.session.getBasicRemote().setBatchingAllowed(true);
+                            //item.session.getBasicRemote().flushBatch();
+                            item.session.getBasicRemote().sendText(returnStr);
+                            //item.session.getAsyncRemote().sendText(returnStr);
+
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        webSocketSet.remove(this);  //从set中删除
+                        subOnlineCount();           //在线数减1
+                        concurrentHashMap.get(this.httpSession.getAttribute("room")).remove(this);
+                        System.out.println("有一连接关闭！当前在线人数为" + getOnlineCount());
+                        try {
+                            item.session.close();
+                        } catch (IOException e1) {
+                            // Ignore
+                        }
+                        continue;
                     }
-                    continue;
                 }
             }
         }
